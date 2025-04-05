@@ -4,6 +4,8 @@ from aiogram.types import Message
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 
+from db.models import get_user_data, save_user_data
+
 user_data = {}
 
 router = Router()
@@ -63,6 +65,8 @@ async def finish_reg(message: Message, state: FSMContext):
         "vin": data["vin"],
         "year": data["year"]
     }
+    await save_user_data(str(message.from_user.id), data["vin"], data["year"])
+
     await message.answer('Введите что нужно подобрать: ')
     await message.bot.send_message(-1002200498147, f'🔹 Новый пользователь зарегистрирован:\n'
                                                    f'👤 ID: {message.from_user.id}\n'
@@ -73,9 +77,13 @@ async def finish_reg(message: Message, state: FSMContext):
 
 @router.message()
 async def forward_to_group(message: Message):
-    user_id = message.from_user.id
-    vin = user_data.get(user_id, {}).get("vin")
-    year = user_data.get(user_id, {}).get("year")
+    user_id = str(message.from_user.id)
+    user_info = await get_user_data(user_id)
+
+    if user_info:
+        vin, year = user_info
+    else:
+        vin, year = "Неизвестен", "Неизвестен"
 
     text = f'📩 Сообщение от {message.from_user.full_name}:\n' \
            f'👤 ID: {user_id}\n' \
